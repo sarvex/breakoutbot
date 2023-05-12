@@ -49,16 +49,14 @@ class ActionPickUp(Action):
                 item = blob['value']
                 if item not in able_to_pick_up:
                     dispatcher.utter_message(text=f"You can't pick up {item}.")
+                elif item_in_inventory := tracker.get_slot(item):
+                    dispatcher.utter_message(text=f"You already have {item} in your inventory.")
                 else:
-                    item_in_inventory = tracker.get_slot(item)
-                    if item_in_inventory:
-                        dispatcher.utter_message(text=f"You already have {item} in your inventory.")
-                    else:
-                        items_to_add.append(SlotSet(item, True))
-                        dispatcher.utter_message(text=f"You've picked up the {item} and it is in your inventory.")
+                    items_to_add.append(SlotSet(item, True))
+                    dispatcher.utter_message(text=f"You've picked up the {item} and it is in your inventory.")
 
         # We could add multiple items here.
-        if len(items_to_add) > 0:
+        if items_to_add:
             return items_to_add
         dispatcher.utter_message(text="Are you sure you spelled the item you wanted to pick up correctly?")
         return []
@@ -72,7 +70,7 @@ class ActionInventory(Action):
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         items_in_inventory = [item for item in able_to_pick_up if tracker.get_slot(item)]
-        if len(items_in_inventory) == 0:
+        if not items_in_inventory:
             dispatcher.utter_message(text="There are no items in your inventory.")
             return []
         dispatcher.utter_message(text="These are the items in your inventory:")
@@ -86,7 +84,7 @@ combinations = {
     ('poster', 'box'): "Why put the poster back in the box? You've just picked it up!",
     ('key', 'box'): "Why put the key back in the box? It's probably super useful.",
 }
-combinations.update({(i2, i1): v for (i1, i2), v in combinations.items()})
+combinations |= {(i2, i1): v for (i1, i2), v in combinations.items()}
 
 
 class ActionUse(Action):
@@ -97,7 +95,7 @@ class ActionUse(Action):
             tracker: Tracker,
             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
         entities = [e['value'] for e in tracker.latest_message['entities'] if e['entity'] == 'object']
-        if len(entities) == 0:
+        if not entities:
             dispatcher.utter_message(text="I think you want to combine items but something is unclear.")
             dispatcher.utter_message(text="Could you retry and make sure you spelled the items correctly?.")
             return []
